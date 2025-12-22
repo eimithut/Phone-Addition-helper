@@ -3,33 +3,42 @@ import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { Message } from "../types";
 
 export const getGeminiResponse = async (history: Message[], userInput: string): Promise<string> => {
-  // Always use the correct initialization with the named apiKey parameter and direct reference to process.env.API_KEY
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Ensure the API Key is treated as a string
+  const apiKey = String(process.env.API_KEY || "");
+  const ai = new GoogleGenAI({ apiKey });
   
   const systemInstruction = `
     You are "Zen", a compassionate digital wellness coach. 
     Your goal is to help the user reduce phone addiction and find joy in offline activities. 
-    Be supportive, use a calming tone, and suggest creative "analog" alternatives to scrolling (like reading, drawing, walking, gardening, or meditation).
+    Be supportive, use a calming tone, and suggest creative "analog" alternatives to scrolling.
     Keep responses concise but insightful. 
     If they are feeling an urge to use their phone, provide a quick mindfulness technique.
   `;
 
-  // Build the contents format for the SDK
-  const contents = history.map(msg => ({
-    role: msg.role === 'user' ? 'user' : 'model' as any,
-    parts: [{ text: msg.text }]
-  }));
-  
-  // Add the new message
-  contents.push({
-    role: 'user',
-    parts: [{ text: userInput }]
-  });
+  // Gemini requires the first message in the contents array to be from the 'user'.
+  // We filter history and ensure only plain data is sent.
+  const conversationHistory = history
+    .filter((msg, index) => {
+      if (index === 0 && msg.role === 'model') return false;
+      return true;
+    })
+    .map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: String(msg.text || "") }]
+    }));
+
+  const contents = [
+    ...conversationHistory,
+    {
+      role: 'user',
+      parts: [{ text: String(userInput || "") }]
+    }
+  ];
 
   try {
     const result: GenerateContentResponse = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: contents as any,
+      contents: contents,
       config: {
         systemInstruction,
         temperature: 0.8,
@@ -37,10 +46,13 @@ export const getGeminiResponse = async (history: Message[], userInput: string): 
       }
     });
 
-    // Access the .text property directly to retrieve the generated string
     return result.text || "I'm reflecting on that. Let's take a deep breath together.";
-  } catch (error) {
-    console.error("Gemini Error:", error);
+  } catch (error: any) {
+    // FIX: Only log the message string. Logging the full error object 
+    // often causes 'cyclic structure' errors in remote loggers or interceptors.
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Gemini API Error:", errorMessage);
+    
     return "I'm having trouble connecting to my digital sanctuary right now. Maybe take a 5-minute offline break while I recover?";
   }
 };

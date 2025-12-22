@@ -25,9 +25,9 @@ interface FocusModeProps {
 
 const AMBIENT_TRACKS = [
   { id: 'none', label: 'Silence', icon: VolumeX, url: '' },
-  { id: 'rain', label: 'Soft Rain', icon: CloudRain, url: 'https://www.soundjay.com/nature/rain-01.mp3' },
-  { id: 'wind', label: 'Mountain Wind', icon: Wind, url: 'https://www.soundjay.com/nature/wind-howl-01.mp3' },
-  { id: 'nature', label: 'Forest Birds', icon: Trees, url: 'https://www.soundjay.com/nature/birds-chirping-01.mp3' },
+  { id: 'rain', label: 'Rainfall', icon: CloudRain, url: 'https://upload.wikimedia.org/wikipedia/commons/0/01/Rain_Heavy_Loud.mp3' },
+  { id: 'wind', label: 'Mountain', icon: Wind, url: 'https://upload.wikimedia.org/wikipedia/commons/0/0a/Storm_in_the_mountains.mp3' },
+  { id: 'nature', label: 'Forest', icon: Trees, url: 'https://upload.wikimedia.org/wikipedia/commons/1/11/Forest_in_morning.mp3' },
 ];
 
 const FocusMode: React.FC<FocusModeProps> = ({ onSessionComplete }) => {
@@ -39,7 +39,6 @@ const FocusMode: React.FC<FocusModeProps> = ({ onSessionComplete }) => {
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
   
-  // Audio state
   const [currentTrack, setCurrentTrack] = useState(AMBIENT_TRACKS[0]);
   const [isMusicMuted, setIsMusicMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -57,29 +56,18 @@ const FocusMode: React.FC<FocusModeProps> = ({ onSessionComplete }) => {
     return () => clearInterval(interval);
   }, [isActive, timeLeft]);
 
-  // Handle music logic
-  const playAudio = async () => {
-    if (audioRef.current && currentTrack.url && !isMusicMuted) {
-      try {
-        setAudioError(null);
-        // Ensure the browser allows the operation
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          await playPromise;
-        }
-      } catch (err: any) {
-        console.warn("Audio playback failed:", err);
-        // Don't show error for standard AbortError (e.g. paused before it could play)
-        if (err.name !== 'AbortError') {
-          setAudioError("Audio playback not supported or blocked.");
-        }
+  const executePlay = async () => {
+    if (!audioRef.current || !currentTrack.url || isMusicMuted) return;
+    
+    try {
+      setAudioError(null);
+      await audioRef.current.play();
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        const msg = err instanceof Error ? err.message : "Playback interrupted";
+        console.warn("Audio play failed:", msg);
+        setAudioError("Playback Issue. Try toggling again.");
       }
-    }
-  };
-
-  const pauseAudio = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
     }
   };
 
@@ -88,51 +76,50 @@ const FocusMode: React.FC<FocusModeProps> = ({ onSessionComplete }) => {
     setIsActive(nextActive);
     
     if (nextActive) {
-      await playAudio();
+      await executePlay();
     } else {
-      pauseAudio();
+      audioRef.current?.pause();
     }
   };
 
-  const handleTrackChange = async (track: typeof AMBIENT_TRACKS[0]) => {
+  const handleTrackChange = (track: typeof AMBIENT_TRACKS[0]) => {
     setAudioError(null);
-    pauseAudio();
+    if (audioRef.current) audioRef.current.pause();
     setCurrentTrack(track);
     
-    if (track.url === '') {
+    if (track.url) {
+      setIsAudioLoading(true);
+    } else {
       setIsAudioLoading(false);
-      return;
     }
-
-    // Set loading state until the new source is ready
-    setIsAudioLoading(true);
   };
 
-  // Called when the audio element has loaded enough data to play
   const onAudioCanPlay = async () => {
     setIsAudioLoading(false);
     if (isActive && !isMusicMuted) {
-      await playAudio();
+      await executePlay();
     }
   };
 
-  const onAudioError = () => {
+  const onAudioError = (e: any) => {
+    // FIX: Never log the raw event 'e'. It is a cyclic structure.
+    console.error("Audio stream error encountered");
     setIsAudioLoading(false);
-    setAudioError("Failed to load audio source.");
+    setAudioError("Unable to load track.");
   };
 
   const toggleMute = async () => {
     const nextMuted = !isMusicMuted;
     setIsMusicMuted(nextMuted);
     if (!nextMuted && isActive) {
-      await playAudio();
+      await executePlay();
     } else {
-      pauseAudio();
+      audioRef.current?.pause();
     }
   };
 
   const handleComplete = () => {
-    pauseAudio();
+    if (audioRef.current) audioRef.current.pause();
     if (mode === 'focus') {
       onSessionComplete({
         id: Date.now().toString(),
@@ -152,13 +139,13 @@ const FocusMode: React.FC<FocusModeProps> = ({ onSessionComplete }) => {
 
   const resetTimer = () => {
     setIsActive(false);
-    pauseAudio();
+    if (audioRef.current) audioRef.current.pause();
     setTimeLeft(initialTime);
   };
 
   const setDuration = (mins: number) => {
     setIsActive(false);
-    pauseAudio();
+    if (audioRef.current) audioRef.current.pause();
     setTimeLeft(mins * 60);
     setInitialTime(mins * 60);
     setMode('focus');
@@ -175,12 +162,11 @@ const FocusMode: React.FC<FocusModeProps> = ({ onSessionComplete }) => {
   return (
     <div className="max-w-xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-700">
       <div className="text-center">
-        <h2 className="text-3xl font-serif text-stone-900 dark:text-stone-100 mb-2">Deep Work Zone</h2>
+        <h2 className="text-3xl font-serif text-stone-900 dark:text-stone-100 mb-2 transition-colors">Deep Work Zone</h2>
         <p className="text-stone-500 dark:text-stone-400">Put your phone away and focus on what matters.</p>
       </div>
 
       <div className="bg-white dark:bg-stone-900 p-8 md:p-12 rounded-[3rem] border border-stone-100 dark:border-stone-800 shadow-xl shadow-stone-200/50 dark:shadow-none flex flex-col items-center relative overflow-hidden transition-colors">
-        {/* Only render audio if a track is selected to avoid blank source errors */}
         {currentTrack.url && (
           <audio 
             key={currentTrack.id}
@@ -188,13 +174,11 @@ const FocusMode: React.FC<FocusModeProps> = ({ onSessionComplete }) => {
             src={currentTrack.url}
             loop
             preload="auto"
-            crossOrigin="anonymous"
             onCanPlay={onAudioCanPlay}
             onError={onAudioError}
           />
         )}
 
-        {/* Progress Circle Visual */}
         <div className="relative w-64 h-64 flex items-center justify-center mb-8">
           <svg className="w-full h-full -rotate-90">
             <circle
@@ -233,6 +217,7 @@ const FocusMode: React.FC<FocusModeProps> = ({ onSessionComplete }) => {
           <button 
             onClick={resetTimer}
             className="p-4 rounded-full text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 transition-all"
+            title="Reset Timer"
           >
             <RotateCcw size={28} />
           </button>
@@ -255,12 +240,12 @@ const FocusMode: React.FC<FocusModeProps> = ({ onSessionComplete }) => {
           <button 
             onClick={handleComplete}
             className="p-4 rounded-full text-stone-400 dark:text-stone-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all"
+            title="Force Complete"
           >
             <CheckCircle2 size={28} />
           </button>
         </div>
 
-        {/* Music Selection Controls */}
         <div className="w-full border-t border-stone-100 dark:border-stone-800 pt-8 flex flex-col items-center gap-4">
            <div className="flex items-center gap-2 text-stone-400 dark:text-stone-500 mb-2">
              <Music size={16} />
@@ -294,7 +279,7 @@ const FocusMode: React.FC<FocusModeProps> = ({ onSessionComplete }) => {
            </div>
            
            {audioError && (
-             <div className="flex items-center gap-1 text-red-500 text-[10px] font-bold uppercase tracking-wider">
+             <div className="flex items-center gap-1 text-red-500 text-[10px] font-bold uppercase tracking-wider bg-red-50 dark:bg-red-900/20 px-3 py-1 rounded-full animate-in fade-in zoom-in">
                <AlertCircle size={12} />
                {audioError}
              </div>
@@ -302,7 +287,7 @@ const FocusMode: React.FC<FocusModeProps> = ({ onSessionComplete }) => {
 
            {currentTrack.id !== 'none' && !isMusicMuted && isActive && !audioError && (
              <p className="text-[10px] text-emerald-600 dark:text-emerald-500 font-bold uppercase tracking-tighter animate-pulse">
-               {isAudioLoading ? 'Buffering...' : `Playing: ${currentTrack.label}`}
+               {isAudioLoading ? 'Buffering Sound...' : `Now Playing: ${currentTrack.label}`}
              </p>
            )}
         </div>
@@ -312,8 +297,8 @@ const FocusMode: React.FC<FocusModeProps> = ({ onSessionComplete }) => {
             <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4">
               <CheckCircle2 size={40} />
             </div>
-            <h3 className="text-2xl font-bold mb-2">Great Session!</h3>
-            <p className="text-emerald-50">Your progress has been logged. Take a break.</p>
+            <h3 className="text-2xl font-bold mb-2 tracking-tight">Focus Achieved</h3>
+            <p className="text-emerald-50">Session logged. Take a mindful break.</p>
           </div>
         )}
       </div>
