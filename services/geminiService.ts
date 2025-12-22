@@ -3,8 +3,14 @@ import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { Message } from "../types";
 
 export const getGeminiResponse = async (history: Message[], userInput: string): Promise<string> => {
-  // Ensure the API Key is treated as a string
-  const apiKey = String(process.env.API_KEY || "");
+  // Safe access to process.env.API_KEY to prevent crashes if undefined
+  const apiKey = (typeof process !== 'undefined' && process.env?.API_KEY) ? String(process.env.API_KEY) : "";
+  
+  if (!apiKey) {
+    console.error("Gemini API Key is missing. Please ensure process.env.API_KEY is configured.");
+    return "I'm currently resting. Please check my connection settings (API Key).";
+  }
+
   const ai = new GoogleGenAI({ apiKey });
   
   const systemInstruction = `
@@ -16,7 +22,6 @@ export const getGeminiResponse = async (history: Message[], userInput: string): 
   `;
 
   // Gemini requires the first message in the contents array to be from the 'user'.
-  // We filter history and ensure only plain data is sent.
   const conversationHistory = history
     .filter((msg, index) => {
       if (index === 0 && msg.role === 'model') return false;
@@ -48,8 +53,7 @@ export const getGeminiResponse = async (history: Message[], userInput: string): 
 
     return result.text || "I'm reflecting on that. Let's take a deep breath together.";
   } catch (error: any) {
-    // FIX: Only log the message string. Logging the full error object 
-    // often causes 'cyclic structure' errors in remote loggers or interceptors.
+    // FIX: Only log the message string to avoid 'cyclic structure' serialization errors
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Gemini API Error:", errorMessage);
     

@@ -5,6 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unplug - Digital Wellness</title>
+    <!-- Shim for process.env to prevent white screen ReferenceErrors -->
+    <script>
+      window.process = window.process || { env: {} };
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -41,6 +45,14 @@
         * {
             transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease;
         }
+        /* Hide scrollbars for a cleaner look */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
     </style>
 <script type="importmap">
 {
@@ -57,5 +69,7 @@
 </head>
 <body class="bg-stone-50 dark:bg-stone-950">
     <div id="root"></div>
+    <!-- Entry point for the application -->
+    <script type="module" src="./index.tsx"></script>
 </body>
 </html>
