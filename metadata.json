@@ -1,0 +1,7 @@
+{
+  "name": "Unplug: Digital Sanctuary",
+  "description": "A mindful companion to help you break phone addiction, offering deep focus timers, AI coaching, and analog habit tracking.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
