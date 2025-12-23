@@ -15,7 +15,9 @@ import {
   Wind, 
   Trees,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Bird,
+  Waves
 } from 'lucide-react';
 import { FocusSession } from '../types';
 
@@ -25,6 +27,8 @@ interface FocusModeProps {
 
 const AMBIENT_TRACKS = [
   { id: 'none', label: 'Silence', icon: VolumeX, url: '' },
+  { id: 'birds', label: 'Birdsong', icon: Bird, url: 'https://upload.wikimedia.org/wikipedia/commons/b/b5/Bird_Song_in_the_Woods.mp3' },
+  { id: 'zen', label: 'Zen Calm', icon: Waves, url: 'https://upload.wikimedia.org/wikipedia/commons/b/b0/Soft_ambient_pad.mp3' },
   { id: 'rain', label: 'Rainfall', icon: CloudRain, url: 'https://upload.wikimedia.org/wikipedia/commons/0/01/Rain_Heavy_Loud.mp3' },
   { id: 'wind', label: 'Mountain', icon: Wind, url: 'https://upload.wikimedia.org/wikipedia/commons/0/0a/Storm_in_the_mountains.mp3' },
   { id: 'nature', label: 'Forest', icon: Trees, url: 'https://upload.wikimedia.org/wikipedia/commons/1/11/Forest_in_morning.mp3' },
@@ -102,7 +106,6 @@ const FocusMode: React.FC<FocusModeProps> = ({ onSessionComplete }) => {
   };
 
   const onAudioError = (e: any) => {
-    // FIX: Never log the raw event 'e'. It is a cyclic structure.
     console.error("Audio stream error encountered");
     setIsAudioLoading(false);
     setAudioError("Unable to load track.");
@@ -251,30 +254,32 @@ const FocusMode: React.FC<FocusModeProps> = ({ onSessionComplete }) => {
              <Music size={16} />
              <span className="text-xs font-bold uppercase tracking-widest">Ambient Soundscape</span>
            </div>
-           <div className="flex gap-3 overflow-x-auto pb-2 w-full justify-center px-4 no-scrollbar">
+           <div className="flex gap-2 overflow-x-auto pb-4 w-full justify-start md:justify-center px-4 no-scrollbar">
              {AMBIENT_TRACKS.map((track) => (
                <button
                  key={track.id}
                  onClick={() => handleTrackChange(track)}
                  title={track.label}
-                 className={`p-3 rounded-2xl flex flex-col items-center gap-1 transition-all ${
+                 className={`p-3 min-w-[54px] rounded-2xl flex flex-col items-center gap-1 transition-all flex-shrink-0 ${
                    currentTrack.id === track.id
                      ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800'
                      : 'bg-stone-50 dark:bg-stone-800 text-stone-400 dark:text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-700 border border-transparent'
                  }`}
                >
                  <track.icon size={20} />
+                 <span className="text-[8px] font-bold uppercase tracking-tighter">{track.label}</span>
                </button>
              ))}
              <button
                 onClick={toggleMute}
-                className={`p-3 rounded-2xl flex flex-col items-center gap-1 transition-all ${
+                className={`p-3 min-w-[54px] rounded-2xl flex flex-col items-center gap-1 transition-all flex-shrink-0 ${
                   isMusicMuted 
                     ? 'bg-red-50 dark:bg-red-900/20 text-red-500 border border-red-100 dark:border-red-900/40' 
                     : 'bg-stone-50 dark:bg-stone-800 text-stone-400 dark:text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-700 border border-transparent'
                 }`}
               >
                 {isMusicMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                <span className="text-[8px] font-bold uppercase tracking-tighter">{isMusicMuted ? 'Muted' : 'Sound On'}</span>
              </button>
            </div>
            
