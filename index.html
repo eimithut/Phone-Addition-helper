@@ -4,13 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unplug - Digital Wellness</title>
-    <!-- Shim for process.env to prevent white screen ReferenceErrors -->
+    <!-- Non-destructive shim for process.env -->
     <script>
-      window.process = { 
-        env: { 
-          NODE_ENV: 'production'
-        } 
-      };
+      window.process = window.process || {};
+      window.process.env = window.process.env || {};
+      window.process.env.NODE_ENV = window.process.env.NODE_ENV || 'production';
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
